@@ -187,9 +187,6 @@ static void php_brotli_state_rsrc_dtor(zend_resource *res)
 static int php_brotli_output_encoding(void)
 {
 #if PHP_MAJOR_VERSION >= 7
-#if defined(COMPILE_DL_BROTLI) && defined(ZTS)
-    ZEND_TSRMLS_CACHE_UPDATE();
-#endif
     zval *enc;
 #else
     zval **enc;
@@ -1067,9 +1064,6 @@ zend_module_entry brotli_module_entry = {
 };
 
 #ifdef COMPILE_DL_BROTLI
-#if PHP_MAJOR_VERSION >= 7 && defined(ZTS)
-ZEND_TSRMLS_CACHE_DEFINE()
-#endif
 ZEND_GET_MODULE(brotli)
 #endif
 
