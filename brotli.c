@@ -187,6 +187,9 @@ static void php_brotli_state_rsrc_dtor(zend_resource *res)
 static int php_brotli_output_encoding(void)
 {
 #if PHP_MAJOR_VERSION >= 7
+#if defined(COMPILE_DL_BROTLI) && defined(ZTS)
+    ZEND_TSRMLS_CACHE_UPDATE();
+#endif
     zval *enc;
 #else
     zval **enc;
@@ -1064,6 +1067,9 @@ zend_module_entry brotli_module_entry = {
 };
 
 #ifdef COMPILE_DL_BROTLI
+#if PHP_MAJOR_VERSION >= 7 && defined(ZTS)
+ZEND_TSRMLS_CACHE_DEFINE()
+#endif
 ZEND_GET_MODULE(brotli)
 #endif
 
@@ -1393,18 +1399,12 @@ static int APC_SERIALIZER_NAME(brotli)(APC_SERIALIZER_ARGS)
     int result;
     int lgwin = BROTLI_DEFAULT_WINDOW, quality = BROTLI_DEFAULT_QUALITY;
     php_serialize_data_t var_hash;
-    smart_str var = {NULL, 0};
+    smart_str var = {0};
     BrotliEncoderMode mode = BROTLI_MODE_GENERIC;
 
-    BG(serialize_lock)++;
     PHP_VAR_SERIALIZE_INIT(var_hash);
     php_var_serialize(&var, (zval*) value, &var_hash);
     PHP_VAR_SERIALIZE_DESTROY(var_hash);
-    BG(serialize_lock)--;
-    if (EG(exception)) {
-        smart_str_free(&var);
-        var.s = NULL;
-    }
     if (var.s == NULL) {
         return 0;
     }
@@ -1479,14 +1479,12 @@ static int APC_UNSERIALIZER_NAME(brotli)(APC_UNSERIALIZER_ARGS)
         return 0;
     }
 
-    BG(serialize_lock)++;
     PHP_VAR_UNSERIALIZE_INIT(var_hash);
     tmp = ZSTR_VAL(out.s);
     result = php_var_unserialize(value, &tmp,
                                  ZSTR_VAL(out.s) + ZSTR_LEN(out.s),
                                  &var_hash);
     PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
-    BG(serialize_lock)--;
 
     if (!result) {
         php_error_docref(NULL, E_NOTICE,
